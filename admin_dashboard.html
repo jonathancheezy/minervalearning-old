@@ -664,6 +664,165 @@ footer a:hover { text-decoration: underline; }
  </div>
  </div>
  </main>
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: 'BDQafXcXdaUex9P6P_zIWeKItBf7ZOIeKGSju3jE0L9nyA54-N7hg2cZkS97gErRNiqDqqLK8bNOck0tAN3Nq5s',
+    authDomain: 'minerva-learning-a7eac.firebaseapp.com',
+    projectId: 'minerva-learning-a7eac',
+    storageBucket: 'minerva-learning-a7eac.appspot.com',
+    messagingSenderId: '140471258134',
+    appId: '1:140471258134:web:minerva-admin'
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  async function loadAdminData() {
+    try {
+      // Load registrations from Firestore
+      const q = query(collection(db, 'registrations'), orderBy('submittedAt', 'desc'), limit(50));
+      const snapshot = await getDocs(q);
+      const registrations = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Count stats
+      const total = registrations.length;
+      const pending = registrations.filter(r => r.status === 'pending').length;
+
+      // Update stat cards
+      const statCards = document.querySelectorAll('.stat-card');
+      // First card: Total Submissions
+      if (statCards[0]) {
+        statCards[0].querySelector('.label').textContent = 'Total Submissions';
+        const valEl = statCards[0].querySelector('.value');
+        valEl.textContent = total;
+        valEl.className = 'value teal';
+        statCards[0].querySelector('.sub').textContent = 'Parent registrations';
+      }
+      // Fifth card: Pending Review
+      if (statCards[4]) {
+        const valEl = statCards[4].querySelector('.value');
+        valEl.textContent = pending;
+        valEl.className = 'value red';
+        statCards[4].querySelector('.label').textContent = 'Pending Review';
+        statCards[4].querySelector('.sub').textContent = 'Registrations';
+      }
+
+      // Add Submissions tab if not exists
+      const existingTab = document.querySelector('[data-tab="submissions"]');
+      if (!existingTab) {
+        const tabsContainer = document.querySelector('.tabs');
+        if (tabsContainer) {
+          const subTab = document.createElement('button');
+          subTab.className = 'tab';
+          subTab.dataset.tab = 'submissions';
+          subTab.innerHTML = '<span>Submissions</span>';
+          subTab.addEventListener('click', () => showTab('submissions'));
+          tabsContainer.appendChild(subTab);
+        }
+      }
+
+      // Build submissions card
+      const existingSubCard = document.getElementById('submissions-card');
+      if (existingSubCard) existingSubCard.remove();
+
+      const subCard = document.createElement('div');
+      subCard.className = 'card';
+      subCard.id = 'submissions-card';
+      subCard.style.display = 'none';
+
+      let tableHTML = `
+        <div class="card-header">
+          <h2>Recent Registrations</h2>
+          <input type="text" class="search-input" placeholder="Search..." onkeyup="filterSubmissions(this.value)">
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Parent Name</th>
+              <th>Email</th>
+              <th>Student Level</th>
+              <th>Lesson Type</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="submissions-tbody">`;
+
+      registrations.forEach(r => {
+        const date = r.submittedAt ? new Date(r.submittedAt.seconds * 1000).toLocaleDateString() : '—';
+        const level = r.studentLevel || '—';
+        const lessonType = r.lessonType || '—';
+        const statusClass = r.status === 'pending' ? 'pending' : 'active';
+        const statusText = r.status === 'pending' ? 'Pending' : 'Reviewed';
+
+        tableHTML += `
+            <tr>
+              <td>${date}</td>
+              <td>${escapeHtml(r.parentName || '—')}</td>
+              <td>${escapeHtml(r.email || '—')}</td>
+              <td>${escapeHtml(level)}</td>
+              <td>${escapeHtml(lessonType)}</td>
+              <td><span class="badge ${statusClass}">${statusText}</span></td>
+            </tr>`;
+      });
+
+      if (registrations.length === 0) {
+        tableHTML += `<tr><td colspan="6" style="text-align:center;padding:20px;color:#888;">No submissions yet</td></tr>`;
+      }
+
+      tableHTML += `</tbody></table>`;
+
+      subCard.innerHTML = tableHTML;
+
+      // Insert after the first card div
+      const firstCard = document.querySelector('.card');
+      if (firstCard) firstCard.parentNode.insertBefore(subCard, firstCard);
+
+      // Show submissions tab content
+      window.showTab = function(tab) {
+        document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.card').forEach(c => c.style.display = 'none');
+        document.querySelectorAll('.grid-2').forEach(g => g.style.display = 'none');
+        const target = document.querySelector(`[data-tab="${tab}"]`);
+        if (target) target.classList.add('active');
+        const card = tab === 'submissions' ? subCard : document.querySelector('.card');
+        if (card) card.style.display = 'block';
+        if (tab !== 'submissions') {
+          document.querySelectorAll('.grid-2').forEach(g => g.style.display = 'grid');
+        }
+      };
+
+      // Make first tab active by default
+      const firstTab = document.querySelector('.tabs .tab');
+      if (firstTab) {
+        firstTab.addEventListener('click', () => showTab(firstTab.dataset.tab));
+      }
+
+    } catch (err) {
+      console.error('Failed to load admin data:', err);
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  window.filterSubmissions = function(query) {
+    const rows = document.querySelectorAll('#submissions-tbody tr');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  };
+
+  // Init
+  loadAdminData();
+</script>
 <script src="i18n.js"></script>
 </body>
 </html>

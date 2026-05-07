@@ -642,32 +642,63 @@
  <h3 data-i18n="register.parent_success_title">✅ Thank you for registering!</h3>
  <p data-i18n="register.parent_success_msg">We'll match you with the perfect teacher and be in touch soon. Check your email for confirmation.</p>
  </div>
- </div>
-<script>
- // Pre-fill email from URL parameter
- const params = new URLSearchParams(window.location.search);
- const email = params.get('email');
- if (email) {
- document.getElementById('email').value = decodeURIComponent(email);
- }
+<!-- Firebase SDKs -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, addDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
- document.getElementById('parentForm').addEventListener('submit', function(e) {
- e.preventDefault();
+  const firebaseConfig = {
+    apiKey: 'BDQafXcXdaUex9P6P_zIWeKItBf7ZOIeKGSju3jE0L9nyA54-N7hg2cZkS97gErRNiqDqqLK8bNOck0tAN3Nq5s',
+    authDomain: 'minerva-learning-a7eac.firebaseapp.com',
+    projectId: 'minerva-learning-a7eac',
+    storageBucket: 'minerva-learning-a7eac.appspot.com',
+    messagingSenderId: '140471258134',
+    appId: '1:140471258134:web:minerva-admin'
+  };
 
- // Show success message
- document.getElementById('parentForm').style.display = 'none';
- document.getElementById('formSuccess').style.display = 'block';
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
- // Log form data (in production, this would send to backend)
- const formData = new FormData(this);
- console.log('Registration:', Object.fromEntries(formData));
- });
- </script>
+  // Pre-fill email from URL parameter
+  const urlParams = new URLSearchParams(window.location.search);
+  const emailParam = urlParams.get('email');
+  if (emailParam) {
+    document.getElementById('email').value = decodeURIComponent(emailParam);
+  }
 
+  const form = document.getElementById('parentForm');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
 
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
 
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+    }
 
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
 
+    try {
+      await addDoc(collection(db, 'registrations'), {
+        ...data,
+        submittedAt: serverTimestamp(),
+        status: 'pending'
+      });
+
+      form.style.display = 'none';
+      document.getElementById('formSuccess').style.display = 'block';
+    } catch (err) {
+      console.error('Registration error:', err);
+      alert('Something went wrong. Please try again.');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Registration';
+      }
+    }
+  });
+</script>
 
 <script src="i18n.js"></script>
 <script>
