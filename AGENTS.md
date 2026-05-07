@@ -250,3 +250,26 @@ The goal: Be helpful without being annoying. Check in a few times a day, do usef
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
+
+---
+
+## 🚨 Minerva Deployment — READ THIS FIRST
+
+**Minerva uses a DUAL-REPO setup:**
+
+| Repo | Role |
+|------|------|
+| `jonathancheezy/Minerva` | Source of truth — your work goes here |
+| `jonathancheezy/minervalearning-admin` | Cloudflare Pages watches this — auto-deploys from here |
+
+**Auto-deploy chain:**
+```
+Push to Minerva/main → GitHub Action pushes to minervalearning-admin/master → Cloudflare deploys
+```
+
+**Files that get synced to minervalearning-admin:** `parent_registration.html`, `admin_dashboard.html`, `i18n.js`
+
+**DO NOT work directly in minervalearning-admin repo** — your changes will be overwritten on next sync.
+
+**Firebase project:** `minerva-learning-a7eac`, collection: `registrations`
+**Cloudflare URL:** `https://minervalearning-admin.minerva-ai-learning.workers.dev/`
