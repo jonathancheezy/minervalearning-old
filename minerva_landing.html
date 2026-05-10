@@ -1304,11 +1304,6 @@ if (normalizedSaved && translations[normalizedSaved]) {
  btn.addEventListener('click', () => setLang(btn.dataset.lang));
  });
 
- // Apply language from URL if present
- if (langParam && translations[langParam]) {
-   setLang(langParam);
- }
-
  // Form submission
  document.getElementById('waitlistForm').addEventListener('submit', function(e) {
  e.preventDefault();
